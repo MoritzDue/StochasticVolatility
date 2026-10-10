@@ -20,27 +20,6 @@ The project follows three stages:
 - **Robustness:** The RMSE ratio averaged **3.53x across 10 random seeds**, with an across-seed standard deviation of 0.07.
 - **Parameter sensitivity:** Increasing Heston volatility of volatility from 0.0 to 0.4 raised daily hedging RMSE from approximately **0.43 to 1.97**.
 
-## Technologies
-
-Python, NumPy, SciPy, Matplotlib, Monte Carlo simulation, Black-Scholes, Heston stochastic volatility.
-
-## Getting Started
-
-Install dependencies:
-
-`pip install -r requirements.txt`
-
-Run the scripts in order:
-
-```bash
-python 01_monte_carlo_foundations.py
-python 02_heston_pricing.py
-python 03_model_risk_hedging.py
-```
-
-Run validation tests:
-
-`python -m pytest -q`
 
 ## Limitations
 
