@@ -91,4 +91,7 @@ results/               console output of each script
 figures/               figures
 ```
 
-Key references: Heston (1993), Bates (1996), Fang & Oosterlee (2008), Gatheral (2006); full list in [DETAILS.md](DETAILS.md#references).
+References
+Heston (1993), A closed-form solution for options with stochastic volatility, Review of Financial Studies.
+Bates (1996), Jumps and stochastic volatility, Review of Financial Studies.
+Fang & Oosterlee (2008), A novel pricing method for European options based on Fourier-cosine series expansions, SIAM J. Sci. Comput.
