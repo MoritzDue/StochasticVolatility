@@ -1,8 +1,5 @@
 # %% [markdown]
 # # Part 1 - Pricing in the two worlds
-#
-# Before hedging anything I want to be sure the pricer and the simulator agree,
-# because every later result depends on both:
 #   1. Monte Carlo prices vs the COS (Fourier) prices for Heston and Bates.
 #   2. The implied-volatility smiles each world produces.
 
@@ -32,10 +29,7 @@ for name, model, seed in [("Heston", HESTON, 1), ("Bates", BATES, 2)]:
         print(f"{name:<8}{k:7.0f}{e:10.4f}{p:10.4f}{1.96 * s:20.4f}{(p - e) / s:7.1f}")
     fwd_z = (ST.mean() - S0 * np.exp(R)) / (ST.std() / np.sqrt(n_paths))
     print(f"{name:<8} forward E[S_T] vs S0 e^rT: z = {fwd_z:.1f}")
-# All strikes share the same paths, so their z-scores move together: the table is
-# effectively one test per model, not five. A common shift of every z (and the forward z)
-# points to sampling noise in the level of S_T; a z that grows with strike or with the
-# number of time steps would point to discretisation bias instead.
+
 
 # %% 2. Implied volatility smiles
 maturities = [0.25, 0.5, 1.0, 1.5]
