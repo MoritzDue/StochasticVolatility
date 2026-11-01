@@ -6,15 +6,17 @@ How do stochastic volatility, the choice of hedging instrument and a misspecifie
 
 ## Main findings
 
-1. **The model-consistent delta is not the best hedge.** In a Heston market, hedging with the Heston delta ∂C/∂S gives RMSE 1.89, worse than a plain Black-Scholes delta (1.54). I derive the minimum-variance hedge and, via the Itô isometry, the error floor that no stock-only hedge can beat (1.31).
-2. **A second option removes most of the risk, but costs change the trade-off.** Delta-vega hedging cuts RMSE by 83% relative to the best stock-only hedge. With proportional costs, weekly delta-vega rebalancing beats daily in RMSE (0.64 vs 0.76), because it pays less in option trading costs.
+1. **The model-consistent delta is not the best hedge.** In a Heston market, hedging with the Heston delta ∂C/∂S gives RMSE 1.89, worse than a plain Black-Scholes delta (1.54). I derive the minimum-variance hedge and, via the Itô isometry, the continuous-time error floor that no stock-only hedge can beat (RMSE 1.31).
+2. **A second option removes most of the risk, but costs change the trade-off.** In the model-consistent Heston market, delta-vega hedging cuts RMSE by 83% relative to the best stock-only hedge. With proportional costs, weekly delta-vega rebalancing beats daily in RMSE (0.64 vs 0.76), because it pays less in option trading costs.
 3. **A near-perfect calibration still misses the risk that matters.** Heston fits a synthetic Bates (jump) market to 0.076 vol points with the wrong parameters. In that tested scenario, a jump-aware minimum-variance hedge reduced RMSE from 0.920 to 0.452 against the true-model delta-vega hedge, a larger gain than switching between the calibrated and the true model.
 
 ![hedge comparison](figures/02_hedge_comparison.png)
 
-*Daily hedging of a short 1-year ATM call (premium ≈ 10.4). Stock-only hedges in the Heston world (orange) cannot get below the volatility-risk floor; adding a second option (delta-vega) brings the error below even Black-Scholes delta hedging in a Black-Scholes world.*
+*Daily hedging of a short 1-year ATM call (premium ≈ 10.4), lower is better. In the Heston world (orange), the best stock-only hedge (min-var delta) has RMSE 1.37; adding a second option (delta-vega) cuts it to 0.23 in the same market. The blue bars show the same hedges in a Black-Scholes world for reference.*
 
 **Why the numbers can be trusted:** the pricer is checked against independent numerical integration down to 1-day options and zero variance, the simulator against the pricer, and the headline hedge comparisons use paired bootstrap intervals on the same paths. 80 tests, fixed seeds, saved outputs in `results/`.
+
+**Contents:** [Quick start](#quick-start) · [Setup](#setup) · [Methodology](#methodology) · [Results](#results): [Part 1](#part-1-validation-and-smiles-01_pricingpy), [Part 2](#part-2-hedging-in-the-heston-world-02_heston_hedgingpy), [Part 3](#part-3-extension-model-risk-in-a-jump-market-03_model_riskpy) · [Limitations](#limitations) · [Reproduce](#reproduce) · [References](#references)
 
 ## Quick start
 
@@ -24,7 +26,7 @@ python -m pytest -q                       # 80 tests, ~15 s
 python 02_heston_hedging.py --paths 1000  # quick version of Part 2, < 1 min
 ```
 
-Quick runs with fewer paths or another seed give slightly different numbers from the ones below and save their output and figures under separate names (e.g. `results/02_heston_hedging_paths1000_seed1.txt`), so the published results are never overwritten. Full reproduction is under [Reproduce](#reproduce).
+Quick runs with fewer paths give slightly different numbers from the ones below. Full reproduction is under [Reproduce](#reproduce).
 
 ## Setup
 
@@ -56,7 +58,7 @@ Quick runs with fewer paths or another seed give slightly different numbers from
 
 **Simulation.** Full-truncation Euler for the variance and log-Euler for the stock, with 4 steps per day. Jumps are simulated as compound Poisson with the risk-neutral compensator, and the number of jumps on each path and day is recorded.
 
-**Monte Carlo check (Part 1).** All strikes are priced on the same paths, so their z-scores move together and count as one test per model; the forward E[S_T] is reported alongside.
+**Monte Carlo check (Part 1).** All strikes are priced on the same paths, so their pricing errors are correlated and should not be read as independent validation checks; the forward E[S_T] is reported alongside.
 
 **Stock-only hedges (Part 2).** BS delta at a fixed 20%, BS delta at today's implied vol of the sold call (what a Black-Scholes desk would actually use), the Heston delta ∂C/∂S, and the minimum-variance delta Δ + ρξ𝒱/S with 𝒱 = ∂C/∂v, which minimises the instantaneous variance of the hedged book.
 
@@ -95,11 +97,11 @@ The oracle hedges two ways:
 | Heston | 80 / 100 / 120 | 25.045 / 10.394 / 2.333 | 25.078 / 10.414 / 2.343 | 1.4 / 1.2 / 1.2 |
 | Bates | 80 / 100 / 120 | 25.037 / 10.382 / 2.248 | 24.995 / 10.345 / 2.236 | −1.7 / −2.2 / −1.5 |
 
-500,000 paths. Forward check z: Heston 1.5, Bates −1.1. The strike z-scores share paths, so this is one test per model; the common shift across strikes points to sampling noise in the level of S_T rather than a bias that grows with strike.
+500,000 paths. Forward check z: Heston 1.5, Bates −1.1. The strikes are evaluated on shared simulation paths, so their pricing errors are correlated and should not be interpreted as independent validation checks. The common shift across strikes is consistent with sampling noise in the level of S_T rather than a bias that grows with strike.
 
 ![smiles](figures/01_smiles.png)
 
-*Both worlds produce the downward-sloping equity skew. Jumps steepen it at short maturities (80-strike minus 120-strike implied vol at 3 months: Bates 10.6 vs Heston 8.4 vol points), while at 1 year the two are almost equal (6.0 vs 5.7): the short-dated skew is the signature of jumps.*
+*Both worlds produce the downward-sloping equity skew. In the tested specifications, Bates produces a steeper three-month skew than Heston (80-strike minus 120-strike implied vol: 10.6 vs 8.4 vol points), while their one-year skews are similar (6.0 vs 5.7). The two worlds also use different diffusion parameters, so this is not an isolated effect of jumps.*
 
 ### Part 2: hedging in the Heston world (`02_heston_hedging.py`)
 
@@ -142,7 +144,7 @@ Daily Black-Scholes delta hedging is 3.5x worse in the Heston world than in the 
 
 ![rebalancing](figures/02_rebalancing.png)
 
-*In the Black-Scholes world the error falls like 1/√n with the number of rebalances (fitted slope −0.49 over 51–252 rebalances; theory −0.5). In the Heston world every stock-only hedge flattens out towards the volatility-risk floor: trading more often cannot hedge volatility. Only the option hedge keeps improving.*
+*In the Black-Scholes world the error falls like 1/√n with the number of rebalances (fitted slope −0.49 over 51–252 rebalances; theory −0.5). In the Heston world the stock-only hedges level off at non-zero limits that depend on the delta used (continuous-time RMSE 1.49 for BS delta at 20%, 1.40 at implied vol, 1.31 for the min-var delta); only the min-var delta approaches the floor that no stock-only hedge can beat (dashed line). Trading more often cannot hedge volatility; only the option hedge keeps improving.*
 
 | RMSE by rebalances per year | 4 | 12 | 26 | 51 | 126 | 252 |
 |---|---:|---:|---:|---:|---:|---:|
@@ -152,14 +154,18 @@ Daily Black-Scholes delta hedging is 3.5x worse in the Heston world than in the 
 | Heston world, min-var delta | 3.638 | 2.422 | 1.916 | 1.638 | 1.436 | 1.369 |
 | Heston world, delta-vega | 1.135 | 0.851 | 0.621 | 0.450 | 0.321 | 0.228 |
 
-**Transaction costs reverse the best rebalancing frequency for the option hedge.** Without costs, daily delta-vega rebalancing is best (0.228). With costs of 2 bp on stock and 1% of the option price, weekly rebalancing beats daily in RMSE (0.641 vs 0.763). The reason is cost, not risk: daily option trading costs 0.64 on average against 0.40 weekly, while the spread of outcomes is actually wider when rebalancing weekly (std 0.489 vs 0.413). For the stock-only hedges costs are small (about 0.12) and daily rebalancing stays best. Under these assumptions delta-vega still beats every stock-only hedge, but its advantage over the min-var delta shrinks from 1.14 to 0.62 at daily rebalancing.
+**Among the daily and weekly schedules tested, costs reverse the preferred rebalancing frequency for the option hedge.** Without costs, daily delta-vega rebalancing is better (0.228). Under the assumed costs of 2 bp on stock and 1% of the option price, weekly rebalancing achieves lower RMSE than daily (0.641 vs 0.763). The reason is cost, not risk: daily option trading costs 0.64 on average against 0.40 weekly, while the spread of outcomes is actually wider when rebalancing weekly (std 0.489 vs 0.413). For the stock-only hedges costs are small (about 0.12) and daily rebalancing stays best. Under these assumptions delta-vega still beats every stock-only hedge, but its advantage over the min-var delta shrinks from 1.14 to 0.62 at daily rebalancing.
 
 | With costs (2 bp stock, 1% option price, incl. unwind) | Rebalance | RMSE | Mean | Std | Mean cost |
-|---|---:|---:|---:|---:|---:|
-| BS delta (20%) | daily / weekly | 1.564 / 1.810 | −0.141 / −0.124 | 1.558 / 1.806 | 0.121 / 0.070 |
-| BS delta (implied) | daily / weekly | 1.482 / 1.746 | −0.150 / −0.124 | 1.475 / 1.741 | 0.123 / 0.071 |
-| Min-var delta | daily / weekly | 1.382 / 1.645 | −0.153 / −0.126 | 1.374 / 1.640 | 0.123 / 0.071 |
-| Delta-vega | daily / weekly | 0.763 / 0.641 | −0.642 / −0.415 | 0.413 / 0.489 | 0.638 / 0.399 |
+|---|---|---:|---:|---:|---:|
+| BS delta (20%) | daily | 1.564 | −0.141 | 1.558 | 0.121 |
+| BS delta (20%) | weekly | 1.810 | −0.124 | 1.806 | 0.070 |
+| BS delta (implied) | daily | 1.482 | −0.150 | 1.475 | 0.123 |
+| BS delta (implied) | weekly | 1.746 | −0.124 | 1.741 | 0.071 |
+| Min-var delta | daily | 1.382 | −0.153 | 1.374 | 0.123 |
+| Min-var delta | weekly | 1.645 | −0.126 | 1.640 | 0.071 |
+| Delta-vega | daily | 0.763 | −0.642 | 0.413 | 0.638 |
+| Delta-vega | weekly | 0.641 | −0.415 | 0.489 | 0.399 |
 
 ![pnl distributions](figures/02_pnl_distributions.png)
 
@@ -173,7 +179,7 @@ Daily Black-Scholes delta hedging is 3.5x worse in the Heston world than in the 
 
 Calibrated Heston: v0 = 0.0394, θ = 0.0399, κ = 3.786, ξ = 0.456, ρ = −0.707, against the true diffusion part v0 = θ = 0.032, κ = 2, ξ = 0.3, ρ = −0.7 plus jumps. The calibration absorbs the jumps into a higher variance level and a higher vol-of-vol. Feller condition holds (0.302 > 0.208).
 
-**Fitting today's surface is not the same as being dynamically consistent.** Each day the calibrated hedger backs out its variance from the hedge option's market price. On 5.94% of path-days (48.9% of paths at least once) no variance in [0, 1] reprices that option. All failures occur at the lower boundary: the model is too expensive even at v = 0, by 0.085 on average. They cluster on days with very low true variance (0.0039 on average, against 0.032 overall), where vega is small. Over all days its implied variance tracks the true variance closely (correlation 0.994) but is biased upwards (mean 0.041 vs 0.032). Despite these failures, the calibrated hedger's Greek hedges perform close to the oracle's (below): the costly gap is the missing jumps, not the failed inversions.
+**Fitting today's surface is not the same as being dynamically consistent.** Each day the calibrated hedger backs out its variance from the hedge option's market price. On 5.94% of path-days (48.9% of paths at least once) no variance in [0, 1] reprices that option. All failures occur at the lower boundary: the model is too expensive even at v = 0, by 0.085 on average. They cluster on days with very low true variance (0.0039 on average, against 0.032 overall), where vega is small. Over all days its implied variance tracks the true variance closely (correlation 0.994) but is biased upwards (mean 0.041 vs 0.032). Despite these failures, the calibrated hedger's Greek hedges perform comparably to the oracle's Greek hedges (below). How much the failures themselves cost is not isolated here.
 
 Other checks: the oracle's variance is recovered from prices to within 7.5e-9 where the hedge option's variance vega exceeds 0.1, and is not identified on 0.83% of sampled path-days. No option held: oracle 0.29%, calibrated 1.42% of path-days (0.03% on inversion-failure days).
 
@@ -241,7 +247,7 @@ python 03_model_risk.py --paths 1000      # ~5 min, for a quick pass
 python 03_model_risk.py --seed 8          # robustness check on a second set of paths
 ```
 
-Tested with Python 3.14. Run the scripts from this folder. Figures are written to `figures/` and everything each script prints is saved to `results/`. Runs with a non-default `--paths` or `--seed` get their own results and figure files, so the published outputs are never overwritten; with fewer paths, the numbers and confidence intervals will differ slightly from those above. All seeds are fixed. The scripts use `# %%` cells, so they can also be run cell by cell in VS Code or Spyder.
+Tested with Python 3.14. Run the scripts from this folder. Figures are written to `figures/` and everything each script prints is saved to `results/`. Runs with a non-default `--paths` or `--seed` save their console output to a separate file in `results/`, but write their figures to the same files in `figures/`; with fewer paths, the numbers and confidence intervals will differ slightly from those above. All seeds are fixed. The scripts use `# %%` cells, so they can also be run cell by cell in VS Code or Spyder.
 
 ```
 sv.py                  model code: Black-Scholes, Heston/Bates COS pricer, simulation, hedge P&L,
@@ -253,13 +259,3 @@ test_sv.py             numerical, accounting and hedge-ratio tests
 results/               console output of each script
 figures/               figures used in this README
 ```
-
-## References
-
-- Heston (1993), A closed-form solution for options with stochastic volatility, *Review of Financial Studies*.
-- Bates (1996), Jumps and stochastic volatility, *Review of Financial Studies*.
-- Albrecher, Mayer, Schoutens & Tistaert (2007), The little Heston trap, *Wilmott*.
-- Fang & Oosterlee (2008), A novel pricing method for European options based on Fourier-cosine series expansions, *SIAM J. Sci. Comput.*
-- Andersen (2008), Simple and efficient simulation of the Heston stochastic volatility model, *Journal of Computational Finance*.
-- Schweizer (1991), Option hedging for semimartingales, *Stochastic Processes and their Applications*.
-- Gatheral (2006), *The Volatility Surface*.
