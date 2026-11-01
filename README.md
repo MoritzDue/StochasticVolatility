@@ -2,6 +2,12 @@
 
 A simulation study of why delta hedging fails when volatility moves, what fixes it, and what a well-calibrated but wrong model costs.
 
+**In short**
+
+- **Built:** a Heston/Bates option pricer (COS Fourier method) with exact Greeks, a Monte Carlo hedging engine with transaction costs, a Heston calibrator, and a jump-aware minimum-variance hedger. Python (NumPy, SciPy), 80 unit tests.
+- **Found:** under stochastic volatility, Black-Scholes delta hedging is 3.5x worse, and most of that error cannot be removed by any stock-only hedge; adding a second option cuts it by 83%. In a jump market, choosing the right hedging objective was worth far more than knowing the true model.
+- **Checked:** the pricer against independent numerical integration, the simulator against the pricer, and every comparison with paired bootstrap intervals on the same paths.
+
 ## Key findings
 
 1. **How much of the stock-only hedging error is volatility risk, and how much is the choice of delta?** Daily Black-Scholes delta hedging is 3.5x worse in a Heston market than in a Black-Scholes one. In a stochastic-volatility market the "right" delta depends on the objective: the Heston delta ∂C/∂S is not the error-minimising stock position, the minimum-variance delta is. The Itô isometry gives each stock-only hedge's error under continuous rebalancing and the floor that no stock-only hedge can beat (RMSE 1.31). That floor is 87% of the continuous-time variance for BS delta at today's implied vol, 77% at a fixed 20% vol and only 51% for the Heston delta, which is worse than the naive BS delta (paired difference Heston minus fixed-vol BS delta: +0.35 [+0.31, +0.38]). The rest is the choice of delta.
@@ -10,7 +16,7 @@ A simulation study of why delta hedging fails when volatility moves, what fixes 
 
 ## Setup
 
-- Short one 1-year ATM call (S0 = K = 100, r = 5%), hedged daily over 252 trading days. 4,000 paths in Part 2 and, by default, in Part 3 (`--paths`, `--seed` to change).
+- Short one 1-year ATM call (S0 = K = 100, r = 5%), hedged daily over 252 trading days. 4,000 paths by default in Parts 2 and 3 (`--paths`, `--seed` to change).
 - **Heston world:** v0 = θ = 0.04, κ = 2, ξ = 0.3, ρ = −0.7.
 - **Black-Scholes world:** σ = 20%, driven by the same stock shocks as the Heston world, so comparisons are paired.
 - **Bates world** (Heston + lognormal jumps, Part 3): v0 = θ = 0.032, κ = 2, ξ = 0.3, ρ = −0.7, jump intensity λ = 0.4 per year, log jump size N(−10%, 10%²). Expected annual variance of log-returns is 0.032 + λ·E[J²] = 0.04, as in the Heston world (the ATM implied vol is not exactly 20%).
@@ -114,7 +120,7 @@ Hedge ratios at t = 0: BS delta 0.637, BS delta at implied vol 0.637, Heston del
 | Heston delta | 1.829 [1.818, 1.841] | 1.890 | 51% |
 | Min-var delta | 1.306 [1.299, 1.315] | 1.369 | 100% |
 
-Interpretation: the Heston delta ∂C/∂S over-hedges (0.69 vs 0.61 at t = 0). With ρ = −0.7 a fall in the stock tends to come with a rise in variance, which raises the call's value and offsets part of the stock move; the min-var delta builds this in through the ρξ𝒱/S term, the Heston delta ignores it. A BS delta happens to sit closer to the min-var delta, so it does better than the "correct" model's delta. Daily rebalancing adds roughly the same error (≈0.41–0.48) in both worlds, so the extra error in the Heston world is almost entirely continuous-time volatility risk, not discretisation.
+Interpretation: the Heston delta ∂C/∂S over-hedges (0.69 vs 0.61 at t = 0). With ρ = −0.7 a fall in the stock tends to come with a rise in variance, which raises the call's value and offsets part of the stock move; the min-var delta builds this in through the ρξ𝒱/S term, the Heston delta ignores it. A BS delta happens to sit closer to the min-var delta, so it does better than the "correct" model's delta. By the rough check in the script, daily rebalancing adds about the same error (≈0.41–0.48) in both worlds, so the extra error in the Heston world is mostly continuous-time volatility risk, not discretisation.
 
 ![rebalancing](figures/02_rebalancing.png)
 
@@ -204,7 +210,7 @@ python 03_model_risk.py --paths 1000      # ~5 min, for a quick pass
 python 03_model_risk.py --seed 8          # robustness check on a second set of paths
 ```
 
-Run the scripts from this folder; figures are written to `figures/` and everything each script prints is saved to `results/` (runs with non-default `--paths` or `--seed` get their own file). All seeds are fixed. The scripts use `# %%` cells, so they can also be run cell by cell in VS Code or Spyder.
+Tested with Python 3.14. Run the scripts from this folder; figures are written to `figures/` and everything each script prints is saved to `results/` (runs with non-default `--paths` or `--seed` get their own file). All seeds are fixed. The scripts use `# %%` cells, so they can also be run cell by cell in VS Code or Spyder.
 
 ```
 sv.py                  model code: Black-Scholes, Heston/Bates COS pricer, simulation, hedge P&L,
