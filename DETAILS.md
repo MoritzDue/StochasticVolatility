@@ -223,12 +223,3 @@ The variance inversion fails on 5.64% of path-days (vs 5.94%), and the split by 
 - **Complete-market benchmark:** in Part 2 the hedge option trades at Heston prices in a Heston market, so delta-vega hedging is perfect in continuous time by construction. Part 3 is where it is tested against a market it does not describe.
 - **Simulation scheme:** full-truncation Euler is validated against COS prices, but Andersen's QE scheme would be more accurate for larger ξ.
 
-## References
-
-- Heston (1993), A closed-form solution for options with stochastic volatility, *Review of Financial Studies*.
-- Bates (1996), Jumps and stochastic volatility, *Review of Financial Studies*.
-- Albrecher, Mayer, Schoutens & Tistaert (2007), The little Heston trap, *Wilmott*.
-- Fang & Oosterlee (2008), A novel pricing method for European options based on Fourier-cosine series expansions, *SIAM J. Sci. Comput.*
-- Andersen (2008), Simple and efficient simulation of the Heston stochastic volatility model, *Journal of Computational Finance*.
-- Schweizer (1991), Option hedging for semimartingales, *Stochastic Processes and their Applications*.
-- Gatheral (2006), *The Volatility Surface*.
