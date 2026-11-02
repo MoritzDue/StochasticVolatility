@@ -1,7 +1,5 @@
 # Hedging Under Stochastic Volatility and Model Risk
 
-[![tests](https://github.com/MoritzDue/StochasticVolatility/actions/workflows/tests.yml/badge.svg)](https://github.com/MoritzDue/StochasticVolatility/actions/workflows/tests.yml)
-
 *Python · Heston / Bates · Fourier-COS pricing · Monte Carlo · dynamic hedging · model risk*
 
 **How much risk is left when an options desk delta-hedges, and how much of it comes from volatility, from the hedging instrument, or from using the wrong model?** I answer this for a short 1-year call in simulated markets with known dynamics, so every hedge can be compared against the truth.
