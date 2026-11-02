@@ -1,5 +1,12 @@
 # %% [markdown]
 # # Part 3 - Model risk in a Bates market
+#   The market follows Bates (Heston + jumps). Two hedgers trade at the same prices on the
+#   same paths:
+#     - a calibrated Heston hedger, who only sees option prices: it fits Heston to the
+#       t = 0 smile, then each day backs out its variance from the hedge option's price;
+#     - an oracle, who knows the true Bates model and reads the true variance.
+#   The question: how much hedging risk comes from not knowing the model, and how much
+#   from hedging with the wrong objective (Greek-neutral instead of jump-aware min-var)?
 
 # %%
 import argparse
@@ -7,12 +14,11 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
-from scipy.optimize import least_squares
 
-from sv import (BATES, K, N_DAYS, R, S0, T, SVModel, bootstrap_indices, bs_delta, cos_call,
-                hedge_pnl, histogram_bins, implied_variance, implied_vol, jump_quadrature,
-                log_output, min_var_hedge, paired_difference, rmse, rmse_interval, simulate,
-                summary, vega_ratio)
+from sv import (BATES, K, N_DAYS, R, S0, T, bootstrap_indices, bs_delta, calibrate_heston,
+                cos_call, hedge_pnl, histogram_bins, implied_variance, implied_vol,
+                jump_quadrature, log_output, min_var_hedge, model_ivs, paired_difference, rmse,
+                rmse_interval, simulate, summary, vega_ratio)
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--paths", type=int, default=4000)
@@ -33,29 +39,16 @@ jump_sizes, jump_w = jump_quadrature(BATES)
 # %% 1. Create market option prices
 strikes = np.arange(80.0, 125.0, 5.0)
 maturities = [0.25, 0.5, 1.0, 1.5]
-market_iv = {T_: implied_vol(cos_call(S0, strikes, T_, R, BATES.v0, BATES)[0], S0, strikes, T_, R)
-             for T_ in maturities}
+market_iv = model_ivs(BATES, S0, strikes, maturities, R)   # the "market" is the Bates model
 
 # %% 2. Calibrate the Heston model
-def heston_ivs(params):
-    m = SVModel(*params)
-    return {T_: implied_vol(cos_call(S0, strikes, T_, R, m.v0, m)[0], S0, strikes, T_, R)
-            for T_ in maturities}
+# One calibration at t = 0, never repeated. test_sv.py checks that very different
+# starting points converge to the same parameters, so this is not a local optimum.
+heston_cal, residuals = calibrate_heston(market_iv, S0, strikes, R)
+fitted_iv = model_ivs(heston_cal, S0, strikes, maturities, R)
+cal_params = (heston_cal.v0, heston_cal.theta, heston_cal.kappa, heston_cal.xi, heston_cal.rho)
 
-
-def iv_errors(params):
-    model = heston_ivs(params)
-    return np.concatenate([model[T_] - market_iv[T_] for T_ in maturities])
-
-
-start = [0.04, 0.04, 2.0, 0.3, -0.7]
-lower = [0.001, 0.001, 0.1, 0.05, -0.99]
-upper = [0.5, 0.5, 10.0, 2.0, 0.5]
-fit = least_squares(iv_errors, start, bounds=(lower, upper))
-heston_cal = SVModel(*fit.x)
-fitted_iv = heston_ivs(fit.x)
-
-print("Calibrated Heston:  v0={:.4f} theta={:.4f} kappa={:.3f} xi={:.3f} rho={:.3f}".format(*fit.x))
+print("Calibrated Heston:  v0={:.4f} theta={:.4f} kappa={:.3f} xi={:.3f} rho={:.3f}".format(*cal_params))
 print(f"True Bates (diffusion part):  v0={BATES.v0:.4f} theta={BATES.theta:.4f} "
       f"kappa={BATES.kappa:.3f} xi={BATES.xi:.3f} rho={BATES.rho:.3f}, "
       f"plus jumps lam={BATES.lam} mu={BATES.mu_j:.2f} sig={BATES.sig_j:.2f}")
@@ -64,7 +57,7 @@ print(f"Feller condition 2*kappa*theta > xi^2: "
 print("Fit error by maturity (RMSE in vol points):")
 for T_ in maturities:
     print(f"  T = {T_:<5} {100 * rmse(fitted_iv[T_] - market_iv[T_]):.3f}")
-print(f"  all      {100 * rmse(iv_errors(fit.x)):.3f}")
+print(f"  all      {100 * rmse(residuals):.3f}")
 
 fig, axes = plt.subplots(1, 4, figsize=(13, 3.4), sharey=True)
 for ax, T_ in zip(axes, maturities):
@@ -85,6 +78,9 @@ tau = T - days / N_DAYS
 tau_h = T_HEDGE - days / N_DAYS
 shape = (N_DAYS, N_PATHS)
 
+# Naming: c_ = the sold call, h_ = the hedge option, both under the true Bates model.
+#         hc_ / hh_ = the sold call / hedge option as seen by the calibrated Heston hedger.
+#         mv_ = oracle min-var stock-only position; mv2_ = oracle min-var stock + option.
 keys = ["c_price", "c_delta", "c_vega", "h_price", "h_delta", "h_vega",
         "mv_stock", "mv2_stock", "mv2_q",
         "hc_delta", "hc_vega", "hh_delta", "hh_vega",

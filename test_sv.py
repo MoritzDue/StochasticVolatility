@@ -4,9 +4,9 @@ import pytest
 from scipy.integrate import quad
 
 from sv import (BATES, HESTON, K, R, S0, SVModel, _cumulants, bs_call, bs_delta, bs_gamma,
-                char_fn, cos_call, gbm_paths, hedge_pnl, histogram_bins, implied_variance,
+                calibrate_heston, char_fn, cos_call, gbm_paths, hedge_pnl, histogram_bins, implied_variance,
                 implied_vol, jump_quadrature, local_cov, min_var_hedge, paired_difference,
-                simulate, vega_ratio)
+                model_ivs, simulate, vega_ratio)
 
 
 def reference_call(S, strike, T, v, m):
@@ -262,3 +262,19 @@ def test_min_var_hedge_with_jumps_minimises_local_variance():
     # jumps make the option hedge differ from plain delta-vega neutrality (at and above
     # the money by about 0.1 options here; at S = 90 the two happen to nearly coincide)
     assert np.abs(q - call[1] / hedge[1]).max() > 0.05
+
+
+def test_calibration_recovers_heston_and_is_start_independent():
+    strikes, maturities = np.arange(80.0, 125.0, 5.0), [0.25, 0.5, 1.0, 1.5]
+    # On a Heston surface the fit must recover the true parameters
+    heston_iv = model_ivs(HESTON, S0, strikes, maturities, R)
+    fitted, _ = calibrate_heston(heston_iv, S0, strikes, R, start=[0.06, 0.03, 6.0, 0.8, -0.3])
+    np.testing.assert_allclose([fitted.v0, fitted.theta, fitted.kappa, fitted.xi, fitted.rho],
+                               [0.04, 0.04, 2.0, 0.3, -0.7], rtol=1e-3, atol=1e-4)
+    # On the Bates surface (Part 3) very different starts reach the same wrong-but-fitting
+    # parameters, so the Part 3 calibration is not an artefact of a local optimum
+    bates_iv = model_ivs(BATES, S0, strikes, maturities, R)
+    fits = [calibrate_heston(bates_iv, S0, strikes, R, start=s)[0] for s in
+            ([0.04, 0.04, 2.0, 0.3, -0.7], [0.02, 0.06, 1.0, 0.6, -0.5], [0.05, 0.02, 8.0, 1.2, -0.8])]
+    params = np.array([[m.v0, m.theta, m.kappa, m.xi, m.rho] for m in fits])
+    np.testing.assert_allclose(params, np.broadcast_to(params[0], params.shape), rtol=1e-3)

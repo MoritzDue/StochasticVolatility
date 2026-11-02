@@ -1,20 +1,26 @@
 # Hedging Under Stochastic Volatility and Model Risk
 
+[![tests](https://github.com/MoritzDue/StochasticVolatility/actions/workflows/tests.yml/badge.svg)](https://github.com/MoritzDue/StochasticVolatility/actions/workflows/tests.yml)
+
 *Python · Heston / Bates · Fourier-COS pricing · Monte Carlo · dynamic hedging · model risk*
 
-How do stochastic volatility, the choice of hedging instrument and a misspecified model affect the risk of dynamically hedging a short European call? All results come from simulated markets with known dynamics, so every hedge can be compared against the truth.
+**How much risk is left when an options desk delta-hedges, and how much of it comes from volatility, from the hedging instrument, or from using the wrong model?** I answer this for a short 1-year call in simulated markets with known dynamics, so every hedge can be compared against the truth.
+
+Everything is written from scratch: the COS pricer for Heston and Bates, the path simulation, the hedging backtest with transaction costs, the calibration and the jump-aware hedge. The tests check the pricer against direct numerical integration and check that the hedge accounting is self-financing.
+
+Hedging errors below are RMSE of the hedged P&L at expiry; the option premium is about 10.4, so an RMSE of 1.0 is roughly 10% of the premium.
 
 ## Main findings
 
-1. **The model-consistent delta is not the best hedge.** In a Heston market, hedging with the Heston delta ∂C/∂S gives RMSE 1.89, worse than a plain Black-Scholes delta (1.54). I derive the minimum-variance hedge and, via the Itô isometry, the continuous-time error floor that no stock-only hedge can beat (RMSE 1.31).
-2. **A second option removes most of the risk, but costs change the trade-off.** In the model-consistent Heston market, delta-vega hedging cuts RMSE by 83% relative to the best stock-only hedge. With proportional costs, weekly delta-vega rebalancing beats daily in RMSE (0.64 vs 0.76), because it pays less in option trading costs.
-3. **A near-perfect calibration still misses the risk that matters.** Heston fits a synthetic Bates (jump) market to 0.076 vol points with the wrong parameters. In that tested scenario, a jump-aware minimum-variance hedge reduced RMSE from 0.920 to 0.452 against the true-model delta-vega hedge, a larger gain than switching between the calibrated and the true model.
+1. **The model-consistent delta is not the best hedge.** In a Heston market, hedging with the Heston delta ∂C/∂S leaves an error of 1.89 (18% of the premium), worse than a plain Black-Scholes delta (1.54, 15%). I derive the minimum-variance hedge and, via the Itô isometry, the continuous-time error floor that no stock-only hedge can beat (1.31, 13%).
+2. **Volatility risk needs a second option; costs, not risk, then set the trading frequency.** Delta-vega hedging cuts the error by 83% relative to the best stock-only hedge (to 0.23, 2% of the premium). Once option trades cost 1%, weekly rebalancing has the lower RMSE (0.64 vs 0.76), but only because it pays less in costs: its spread of outcomes is wider (std 0.49 vs 0.41).
+3. **A near-perfect calibration still misses the risk that matters.** Heston fits a synthetic Bates (jump) market to 0.076 vol points with clearly wrong parameters. Hedging against jumps (a jump-aware minimum-variance hedge) halved the error of the true-model delta-vega hedge, from 0.92 to 0.45, a larger gain than knowing the true model.
 
 ![hedge comparison](figures/02_hedge_comparison.png)
 
 *Daily hedging of a short 1-year ATM call (premium ≈ 10.4), lower is better. In the Heston world (orange), the best stock-only hedge (min-var delta) has RMSE 1.37; adding a second option (delta-vega) cuts it to 0.23 in the same market. The blue bars show the same hedges in a Black-Scholes world for reference.*
 
-**Why the numbers can be trusted:** the pricer is checked against independent numerical integration down to 1-day options and zero variance, the simulator against the pricer, and the headline hedge comparisons use paired bootstrap intervals on the same paths. 80 tests, fixed seeds, saved outputs in `results/`.
+**Why the numbers can be trusted:** the pricer is checked against independent numerical integration down to 1-day options and zero variance, the simulator against the pricer, and the headline hedge comparisons use paired bootstrap intervals on the same paths. The calibration reaches the same parameters from very different starting points. 81 tests run on every push, fixed seeds make every saved output in `results/` reproduce exactly, and the Part 3 conclusions hold on a second seed.
 
 **Full methodology, derivations and every results table: [DETAILS.md](DETAILS.md).**
 
@@ -71,13 +77,13 @@ More detail in [DETAILS.md](DETAILS.md#limitations).
 
 ```bash
 pip install -r requirements.txt
-python -m pytest -q             # 80 tests, ~15 s
-python 01_pricing.py            # Part 1, ~15 s
+python -m pytest -q             # 81 tests, ~20 s
+python 01_pricing.py            # Part 1, ~1 min
 python 02_heston_hedging.py     # Part 2, ~2 min (--paths 1000 for a quick run)
 python 03_model_risk.py         # Part 3, ~20 min (--paths, --seed to change)
 ```
 
-Tested with Python 3.14. Run from this folder; figures go to `figures/` and each script's printed output to `results/`. Runs with a non-default `--paths` or `--seed` save their console output to a separate file but overwrite the figures; with fewer paths the numbers differ slightly.
+Tested with Python 3.12–3.14. Run from this folder; figures go to `figures/` and each script's printed output to `results/`. Runs with a non-default `--paths` or `--seed` save their console output to a separate file but overwrite the figures; with fewer paths the numbers differ slightly.
 
 ```
 sv.py                  model code: Black-Scholes, Heston/Bates COS pricer, simulation, hedge P&L,

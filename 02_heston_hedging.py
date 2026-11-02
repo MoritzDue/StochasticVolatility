@@ -1,5 +1,11 @@
 # %% [markdown]
 # # Part 2 - Heston hedging
+#   A short 1-year ATM call is hedged daily on simulated Heston paths, and on Black-Scholes
+#   paths driven by the same stock shocks for a like-for-like reference.
+#     1. Stock-only hedges: BS delta (fixed and implied vol), Heston delta, min-var delta.
+#     2. Continuous-time benchmark: the Ito-isometry error floor for any stock-only hedge.
+#     3. Stock + option hedges (delta-gamma, delta-vega) and rebalancing frequency.
+#     4. Proportional transaction costs, daily vs weekly.
 
 
 # %%
@@ -79,6 +85,9 @@ mv_delta = heston["delta"] + HESTON.rho * HESTON.xi * heston["vega"] / S[:-1]
 bs_fixed_delta = bs_delta(S[:-1], K, tb, R, SIGMA)
 
 
+# BS delta at today's implied vol: what a Black-Scholes desk would actually run. The implied
+# vol of the sold call is NaN where its price leaves the BS bounds (deep in or out of the
+# money near expiry); there the desk keeps yesterday's vol (20% on day 0).
 iv = implied_vol(heston["price"], S[:-1], K, tb, R)
 for i in days:
     previous = iv[i - 1] if i > 0 else np.full(N_PATHS, SIGMA)

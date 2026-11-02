@@ -16,11 +16,15 @@ log_output("results/01_pricing.txt")     # everything printed is also saved here
 strikes = np.arange(80.0, 125.0, 5.0)
 
 # %% 1. Monte Carlo vs COS at T = 1
+# The simulator is run with the same scheme the hedging scripts use (4 Euler steps per
+# day), so this checks the paths that Parts 2 and 3 actually hedge on. All strikes share
+# the same paths, so their z-scores move together; the forward check shows that shift.
 n_paths = 500_000
-print(f"European calls, T = 1, {n_paths:,} paths, 252 steps")
+substeps = 4
+print(f"European calls, T = 1, {n_paths:,} paths, {252 * substeps} steps")
 print(f"{'model':<8}{'strike':>7}{'COS':>10}{'MC':>10}{'95% CI half-width':>20}{'z':>7}")
 for name, model, seed in [("Heston", HESTON, 1), ("Bates", BATES, 2)]:
-    ST = simulate(model, n_paths, seed=seed, substeps=1, keep_paths=False)
+    ST = simulate(model, n_paths, seed=seed, substeps=substeps, keep_paths=False)
     payoffs = np.exp(-R) * np.maximum(ST[:, None] - strikes[None, :], 0)
     mc = payoffs.mean(axis=0)
     se = payoffs.std(axis=0) / np.sqrt(n_paths)

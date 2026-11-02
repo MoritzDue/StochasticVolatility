@@ -3,6 +3,7 @@ Model code used by all three scripts.
 
   - Black-Scholes formulas and implied volatility
   - Heston / Bates characteristic function and a COS pricer (price, delta, vega, gamma)
+  - Heston calibration to an implied-vol surface
   - Monte Carlo simulation of Heston / Bates paths
   - P&L of a self-financing hedge of a short call
   - Jump-aware minimum-variance hedge ratios (the Part 3 oracle)
@@ -15,6 +16,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
+from scipy.optimize import least_squares
 from scipy.stats import norm
 
 
@@ -274,6 +276,35 @@ def implied_variance(target, S, K, T, r, m, v_start, v_max=1.0, tol=1e-9, max_it
         v = np.where(done, v, np.where(inside, newton, 0.5 * (lo + hi)))
     price, delta, vega, _ = cos_call(S, K, T, r, v, m)
     return v, price, delta, vega, price - target
+
+
+def model_ivs(m, S, strikes, maturities, r):
+    """Black-Scholes implied vols of model m's call prices, one array per maturity."""
+    return {T_: implied_vol(cos_call(S, strikes, T_, r, m.v0, m)[0], S, strikes, T_, r)
+            for T_ in maturities}
+
+
+# Starting point and box for Heston calibration (v0, theta, kappa, xi, rho)
+CAL_START = [0.04, 0.04, 2.0, 0.3, -0.7]
+CAL_LOWER = [0.001, 0.001, 0.1, 0.05, -0.99]
+CAL_UPPER = [0.5, 0.5, 10.0, 2.0, 0.5]
+
+
+def calibrate_heston(market_iv, S, strikes, r, start=CAL_START):
+    """Least-squares fit of Heston's five parameters to a surface of implied vols.
+
+    `market_iv` maps maturity -> implied vols at `strikes`. The objective is the
+    difference in implied vol (not price), so every option counts about equally.
+    Returns the fitted SVModel and the residuals in vol units.
+    """
+    maturities = list(market_iv)
+
+    def iv_errors(params):
+        model = model_ivs(SVModel(*params), S, strikes, maturities, r)
+        return np.concatenate([model[T_] - market_iv[T_] for T_ in maturities])
+
+    fit = least_squares(iv_errors, start, bounds=(CAL_LOWER, CAL_UPPER))
+    return SVModel(*fit.x), fit.fun
 
 
 def vega_ratio(vega, hedge_vega, min_vega=1e-3):

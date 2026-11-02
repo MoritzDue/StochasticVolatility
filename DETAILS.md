@@ -28,6 +28,7 @@ Companion to the [README](README.md): setup, methodology and derivations, every 
   - the cumulants match the integrated variance as ξ → 0
   - the model converges to Black-Scholes at rate O(ξ)
   - Monte Carlo agrees with COS
+  - the calibration recovers the true parameters on a Heston surface, and reaches the same parameters on the Bates surface from very different starting points
   - the implied-variance solver recovers v (where the option has vega) from any start, and reports when no v fits
   - the hedge accounting is exactly self-financing, and the costs and recorded jumps are correct
   - the jump-aware minimum-variance hedge reduces to the min-var delta and the delta-vega hedge without jumps, and with jumps no nearby position has a smaller local variance
@@ -54,7 +55,7 @@ At the minimum-variance delta this becomes E∫e^{2r(T−t)} ξ²(1−ρ²) v �
 
 **Model risk with jumps (Part 3, extension).** The market follows Bates. Two hedgers trade at the same market prices on the same paths:
 
-- **Calibrated Heston hedger:** sees only option prices. It calibrates Heston once, at t = 0, to implied vols at 9 strikes × 4 maturities. Each day it backs out its variance state from the market price of the hedge option (`implied_variance`: Newton steps safeguarded by bisection on the bracket [0, 1], since the price increases with v). If the target price lies outside the model prices at the bracket ends, it uses the nearer boundary (v = 0 or v = 1), and the script reports how often this happens and at which boundary. Because the root is bracketed, a remaining mismatch means no variance in [0, 1] fits, not that the solver failed.
+- **Calibrated Heston hedger:** sees only option prices. It calibrates Heston once, at t = 0, to implied vols at 9 strikes × 4 maturities (`calibrate_heston`, least squares in implied vol). Very different starting points converge to the same parameters (tested), so the misfit of the parameters is a property of the model, not of a local optimum. Each day it backs out its variance state from the market price of the hedge option (`implied_variance`: Newton steps safeguarded by bisection on the bracket [0, 1], since the price increases with v). If the target price lies outside the model prices at the bracket ends, it uses the nearer boundary (v = 0 or v = 1), and the script reports how often this happens and at which boundary. Because the root is bracketed, a remaining mismatch means no variance in [0, 1] fits, not that the solver failed.
 - **Oracle:** knows the true Bates dynamics and parameters and reads the true variance. It is an idealised benchmark, not a feasible trader. Perfect model knowledge pays off only together with the right objective: the oracle's delta-vega hedge is not optimal under jumps, so the calibrated hedger can match or beat it; the jump-aware minimum-variance oracle is the real benchmark. Its variance input is not itself privileged: under the true model the hedge option's price determines v wherever that option has vega, and the script checks that inverting it recovers the true variance on those path-days. Deep out of the money the price hardly depends on v, so v is not identified there; but then neither option has vega and the hedges hardly depend on v either. The script reports the share of such path-days. Its real advantage is knowing the dynamics, in particular the jumps, which vanilla prices on one date did not reveal.
 
 The oracle hedges two ways:
@@ -70,10 +71,10 @@ The oracle hedges two ways:
 
 | Model, T = 1 | Strike | COS | Monte Carlo | z-score |
 |---|---:|---:|---:|---:|
-| Heston | 80 / 100 / 120 | 25.045 / 10.394 / 2.333 | 25.078 / 10.414 / 2.343 | 1.4 / 1.2 / 1.2 |
-| Bates | 80 / 100 / 120 | 25.037 / 10.382 / 2.248 | 24.995 / 10.345 / 2.236 | −1.7 / −2.2 / −1.5 |
+| Heston | 80 / 100 / 120 | 25.045 / 10.394 / 2.333 | 25.035 / 10.383 / 2.326 | −0.4 / −0.7 / −0.9 |
+| Bates | 80 / 100 / 120 | 25.037 / 10.382 / 2.248 | 25.014 / 10.369 / 2.251 | −1.0 / −0.8 / +0.4 |
 
-500,000 paths. Forward check z: Heston 1.5, Bates −1.1. The strikes are evaluated on shared simulation paths, so their pricing errors are correlated and should not be interpreted as independent validation checks. The common shift across strikes is consistent with sampling noise in the level of S_T rather than a bias that grows with strike.
+500,000 paths, simulated with the same scheme as the hedging experiments (4 Euler steps per day). Every |z| is at most 1.1; forward check z: Heston −0.4, Bates −1.0. The strikes are evaluated on shared simulation paths, so their pricing errors are correlated and should not be interpreted as independent validation checks. The common shift across strikes is consistent with sampling noise in the level of S_T rather than a bias that grows with strike.
 
 ![smiles](figures/01_smiles.png)
 

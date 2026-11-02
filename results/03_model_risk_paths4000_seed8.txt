@@ -1,0 +1,56 @@
+Calibrated Heston:  v0=0.0394 theta=0.0399 kappa=3.786 xi=0.456 rho=-0.707
+True Bates (diffusion part):  v0=0.0320 theta=0.0320 kappa=2.000 xi=0.300 rho=-0.700, plus jumps lam=0.4 mu=-0.10 sig=0.10
+Feller condition 2*kappa*theta > xi^2: 0.302 vs 0.208
+Fit error by maturity (RMSE in vol points):
+  T = 0.25  0.066
+  T = 0.5   0.112
+  T = 1.0   0.062
+  T = 1.5   0.047
+  all      0.076
+
+Daily hedging in the Bates market, 4000 paths (seed 8), premium 10.382
+strategy                              RMSE     mean     std   ES 5%
+BS delta, fixed 19.8% vol            2.296   +0.051   2.296   6.785
+BS delta, today's implied vol        2.233   +0.038   2.233   6.499
+Calibrated Heston delta              2.685   +0.056   2.685   7.551
+Calibrated Heston min-var delta      2.116   +0.028   2.116   6.116
+Calibrated Heston delta-vega         0.965   -0.003   0.965   2.572
+Oracle min-var delta                 1.996   +0.028   1.995   5.324
+Oracle delta-vega                    1.074   -0.002   1.074   3.128
+Oracle min-var + option              0.455   +0.009   0.455   1.049
+
+95% bootstrap intervals for RMSE (jump losses make these wide and skewed;
+the paired differences below are the reliable comparisons):
+  BS delta, fixed 19.8% vol         [2.167, 2.439]
+  BS delta, today's implied vol     [2.102, 2.377]
+  Calibrated Heston delta           [2.569, 2.816]
+  Calibrated Heston min-var delta   [1.979, 2.274]
+  Calibrated Heston delta-vega      [0.775, 1.167]
+  Oracle min-var delta              [1.886, 2.133]
+  Oracle delta-vega                 [0.878, 1.270]
+  Oracle min-var + option           [0.437, 0.475]
+
+Paired differences in RMSE (first minus second, 95% paired-bootstrap interval):
+  Model knowledge, objective fixed:
+    Calibrated Heston min-var delta - Oracle min-var delta: +0.121 [+0.085, +0.163]
+    Calibrated Heston delta-vega - Oracle delta-vega: -0.109 [-0.142, -0.081]
+  Objective, true model known:
+    Oracle delta-vega - Oracle min-var + option: +0.619 [+0.432, +0.811]
+    Oracle min-var delta - Oracle min-var + option: +1.541 [+1.434, +1.681]
+  Both together:
+    Calibrated Heston delta-vega - Oracle min-var + option: +0.510 [+0.323, +0.708]
+
+Heston variance inversion: no v in [0, 1] reprices the hedge option on 5.64% of path-days (48.1% of paths); model too expensive at v = 0 on 5.64%, too cheap at v = 1 on 0.00%
+  on those days: mean |model - market| price 0.086, max 0.389; true variance there averages 0.0040 vs 0.0318 overall
+Its implied variance vs the true diffusive variance: correlation 0.994, mean 0.0406 vs 0.0318
+Variance recovered from the hedge option price with the true model (every 21st day): max error 8.7e-09 where the hedge option's variance vega > 0.1; not identified (vega below that) on 0.83% of sampled path-days
+
+Paths with at least one jump: 33.1% (expected 1 - exp(-lam T) = 33.0%)
+  (1325 paths with a jump, 2675 without)
+  Calibrated Heston min-var delta    RMSE with jumps 3.026, without 1.470
+  Oracle min-var delta               RMSE with jumps 2.714, without 1.519
+  Calibrated Heston delta-vega       RMSE with jumps 1.621, without 0.301
+  Oracle delta-vega                  RMSE with jumps 1.809, without 0.321
+  Oracle min-var + option            RMSE with jumps 0.567, without 0.387
+No option held: oracle min-var 0.25% of path-days, oracle delta-vega 0.25%, calibrated delta-vega 1.36% (of which on inversion-failure days 0.03%)
+Average option holding over the year: calibrated delta-vega 0.848, oracle delta-vega 0.766, oracle min-var 1.024
