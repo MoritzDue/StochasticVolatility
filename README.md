@@ -11,8 +11,8 @@ Hedging errors below are RMSE of the hedged P&L at expiry; the option premium is
 ## Main findings
 
 1. **The model-consistent delta is not the best hedge.** In a Heston market, hedging with the Heston delta ∂C/∂S leaves an error of 1.89 (18% of the premium), worse than a plain Black-Scholes delta (1.54, 15%). I derive the minimum-variance hedge and, via the Itô isometry, the continuous-time error floor that no stock-only hedge can beat (1.31, 13%).
-2. **Volatility risk needs a second option; costs, not risk, then set the trading frequency.** Delta-vega hedging cuts the error by 83% relative to the best stock-only hedge (to 0.23, 2% of the premium). Once option trades cost 1%, weekly rebalancing has the lower RMSE (0.64 vs 0.76), but only because it pays less in costs: its spread of outcomes is wider (std 0.49 vs 0.41).
-3. **A near-perfect calibration still misses the risk that matters.** Heston fits a synthetic Bates (jump) market to 0.076 vol points with clearly wrong parameters. Hedging against jumps (a jump-aware minimum-variance hedge) halved the error of the true-model delta-vega hedge, from 0.92 to 0.45, a larger gain than knowing the true model.
+2. **Volatility risk needs a second option; costs, not risk, then set the trading frequency.** Delta-vega hedging cuts the error by 83% relative to the best stock-only hedge (to 0.23, 2% of the premium). Once option trades cost 1%, weekly rebalancing has the lower RMSE (0.64 vs 0.76; paired difference −0.12 [−0.14, −0.10]), but only because it pays less in costs: its spread of outcomes is wider (std 0.49 vs 0.41; +0.08 [+0.05, +0.10]).
+3. **A near-perfect calibration still misses the risk that matters.** Heston fits a synthetic Bates (jump) market to 0.076 vol points with clearly wrong parameters. Knowing the true model paid off only together with the right objective: with the same delta-vega rule, a hedger who knows the true model did no better than the calibrated one, but a jump-aware minimum-variance hedge built on the true model halved the error (0.92 to 0.45). That hedge is a benchmark, not an achievable strategy: it needs the true jump parameters, and how much of the gain survives estimating them is not tested here.
 
 ![hedge comparison](figures/02_hedge_comparison.png)
 
@@ -49,7 +49,7 @@ With ρ = −0.7 a fall in the stock tends to come with a rise in variance, whic
 
 *In the Black-Scholes world the error falls like 1/√n with the number of rebalances (fitted slope −0.49; theory −0.5). In the Heston world the stock-only hedges level off at non-zero limits that depend on the delta used; only the min-var delta approaches the floor that no stock-only hedge can beat (dashed line). Only the option hedge keeps improving.*
 
-**Costs.** Among the daily and weekly schedules tested, costs reverse the preferred frequency for the option hedge: under the assumed costs (2 bp on stock, 1% of the option price), weekly delta-vega rebalancing achieves lower RMSE than daily (0.641 vs 0.763). The gain is lower cost, not lower risk: the spread of outcomes is wider weekly (std 0.489 vs 0.413).
+**Costs.** Among the daily and weekly schedules tested, costs reverse the preferred frequency for the option hedge: under the assumed costs (2 bp on stock, 1% of the option price), weekly delta-vega rebalancing achieves lower RMSE than daily (0.641 vs 0.763; paired difference −0.122 [−0.143, −0.100]). The gain is lower cost, not lower risk: the spread of outcomes is wider weekly (std 0.489 vs 0.413; paired difference +0.076 [+0.053, +0.101]).
 
 ### Model risk in a jump market
 
@@ -59,7 +59,7 @@ A Heston model calibrated to the Bates market fits its implied vols to 0.076 vol
 
 *Two hedgers trade at the same prices on the same paths: a calibrated Heston hedger that sees only option prices, and an oracle that knows the true Bates model. No Greek-based hedge reaches the oracle's jump-aware minimum-variance hedge (bottom bar).*
 
-For a fixed hedging rule, knowing the true model changed little in this scenario: for delta-vega the calibrated hedger was even slightly better (−0.08 [−0.11, −0.06]; −0.11 [−0.14, −0.08] on a second seed). Changing the objective mattered more: for the true model, the jump-aware hedge cut RMSE from 0.920 to 0.452 (paired difference 0.47 [0.28, 0.71]). On paths with at least one jump its RMSE is 0.55 against 1.53; on paths without jumps it is slightly worse (0.39 vs 0.32).
+For a fixed hedging rule, knowing the true model changed little in this scenario: for delta-vega the calibrated hedger was even slightly better (−0.08 [−0.11, −0.06]; −0.11 [−0.14, −0.08] on a second seed). Changing the objective mattered more: for the true model, the jump-aware hedge cut RMSE from 0.920 to 0.452 (paired difference 0.47 [0.28, 0.71]). On paths with at least one jump its RMSE is 0.55 against 1.53; on paths without jumps it is slightly worse (0.39 vs 0.32). Because it uses the true jump parameters, 0.45 is what jump-aware hedging can reach at best, not a result available to the calibrated Heston hedger, whose model has no jumps.
 
 ## Limitations
 
