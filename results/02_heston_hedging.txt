@@ -74,3 +74,7 @@ Heston world: min-var delta          1   1.382   -0.153   1.374      0.123
 Heston world: min-var delta          5   1.645   -0.126   1.640      0.071
 Heston world: delta-vega             1   0.763   -0.642   0.413      0.638
 Heston world: delta-vega             5   0.641   -0.415   0.489      0.399
+
+Delta-vega with costs, weekly minus daily (95% paired-bootstrap interval):
+  RMSE: -0.122 [-0.143, -0.100]
+  std:  +0.076 [+0.053, +0.101]
