@@ -266,12 +266,23 @@ fig.savefig("figures/02_pnl_distributions.png", dpi=150)
 # %% Transaction costs
 
 
+with_costs = {}
 print("\nWith costs (stock 2 bp, options 1% of price)")
 print(f"{'strategy':<32}{'every':>6}{'RMSE':>8}{'mean':>9}{'std':>8}{'mean cost':>11}")
 for name in ["Heston world: BS delta (20%)", "Heston world: BS delta (impl.)",
              "Heston world: min-var delta", "Heston world: delta-vega"]:
     for every in (1, 5):
         pnl, costs = run(name, every, cost_stock=0.0002, cost_opt=0.01)
+        with_costs[name, every] = pnl
         s = summary(pnl)
         print(f"{name:<32}{every:>6}{s['rmse']:8.3f}{s['mean']:+9.3f}{s['std']:8.3f}"
               f"{costs.mean():11.3f}")
+
+# Weekly vs daily delta-vega with costs, paired on the same paths
+weekly, daily_dv = with_costs["Heston world: delta-vega", 5], with_costs["Heston world: delta-vega", 1]
+diff, lo, hi = paired_difference(weekly, daily_dv, boot)
+std_diffs = [weekly[b].std() - daily_dv[b].std() for b in boot]
+std_lo, std_hi = np.percentile(std_diffs, [2.5, 97.5])
+print("\nDelta-vega with costs, weekly minus daily (95% paired-bootstrap interval):")
+print(f"  RMSE: {diff:+.3f} [{lo:+.3f}, {hi:+.3f}]")
+print(f"  std:  {weekly.std() - daily_dv.std():+.3f} [{std_lo:+.3f}, {std_hi:+.3f}]")
