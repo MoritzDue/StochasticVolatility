@@ -18,7 +18,7 @@ Hedging errors below are RMSE of the hedged P&L at expiry; the option premium is
 
 *Daily hedging of a short 1-year ATM call (premium ≈ 10.4), lower is better. In the Heston world (orange), the best stock-only hedge (min-var delta) has RMSE 1.37; adding a second option (delta-vega) cuts it to 0.23 in the same market. The blue bars show the same hedges in a Black-Scholes world for reference.*
 
-**Why the numbers can be trusted:** the pricer is checked against independent numerical integration down to 1-day options and zero variance, the simulator against the pricer, and the headline hedge comparisons use paired bootstrap intervals on the same paths. The calibration reaches the same parameters from very different starting points. 81 tests run on every push, fixed seeds make every saved output in `results/` reproduce exactly, and the Part 3 conclusions hold on a second seed.
+**Why the numbers can be trusted:** the pricer is checked against direct numerical integration down to 1-day options and zero variance, the simulator against the pricer, and the headline hedge comparisons use paired bootstrap intervals on the same paths. The calibration reaches the same parameters from very different starting points. 81 tests run on every push, fixed seeds make every saved output in `results/` reproduce exactly, and the Part 3 conclusions hold on a second seed.
 
 **Full methodology, derivations and every results table: [DETAILS.md](DETAILS.md).**
 
@@ -81,7 +81,7 @@ python 02_heston_hedging.py     # Part 2, ~2 min (--paths 1000 for a quick run)
 python 03_model_risk.py         # Part 3, ~20 min (--paths, --seed to change)
 ```
 
-Tested with Python 3.12–3.14. Run from this folder; figures go to `figures/` and each script's printed output to `results/`. Runs with a non-default `--paths` or `--seed` save their console output to a separate file but overwrite the figures; with fewer paths the numbers differ slightly.
+Tested with Python 3.12 and 3.13. Run from this folder; figures go to `figures/` and each script's printed output to `results/`. Runs with a non-default `--paths` or `--seed` save their console output to a separate file but overwrite the figures; with fewer paths the numbers differ slightly.
 
 ```
 sv.py                  model code: Black-Scholes, Heston/Bates COS pricer, simulation, hedge P&L,
@@ -95,7 +95,8 @@ results/               console output of each script
 figures/               figures
 ```
 
-References
-Heston (1993), A closed-form solution for options with stochastic volatility, Review of Financial Studies.
-Bates (1996), Jumps and stochastic volatility, Review of Financial Studies.
-Fang & Oosterlee (2008), A novel pricing method for European options based on Fourier-cosine series expansions, SIAM J. Sci. Comput.
+## References
+
+- Heston (1993), A closed-form solution for options with stochastic volatility, Review of Financial Studies.
+- Bates (1996), Jumps and stochastic volatility, Review of Financial Studies.
+- Fang & Oosterlee (2008), A novel pricing method for European options based on Fourier-cosine series expansions, SIAM J. Sci. Comput.
