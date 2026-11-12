@@ -2,11 +2,11 @@
 
 Companion to the [README](README.md): setup, methodology and derivations, every results table, and the full list of limitations. All numbers come from the default runs saved in `results/`.
 
-**Contents:** [Setup](#setup) · [Methodology](#methodology) · [Results](#results): [Part 1](#part-1-validation-and-smiles-01_pricingpy), [Part 2](#part-2-hedging-in-the-heston-world-02_heston_hedgingpy), [Part 3](#part-3-extension-model-risk-in-a-jump-market-03_model_riskpy) · [Limitations](#limitations) · [References](#references)
+**Contents:** [Setup](#setup) · [Methodology](#methodology) · [Results](#results): [Part 1](#part-1-validation-and-smiles-01_pricingpy), [Part 2](#part-2-hedging-in-the-heston-world-02_heston_hedgingpy), [Part 3](#part-3-extension-model-risk-in-a-jump-market-03_model_riskpy) · [Limitations](#limitations) · [References](README.md#references)
 
 ## Setup
 
-- Short one 1-year ATM call (S0 = K = 100, r = 5%), hedged daily over 252 trading days. 4,000 paths by default in Parts 2 and 3 (`--paths`, `--seed` to change).
+- A short 1-year ATM call (S0 = K = 100, r = 5%), hedged daily over 252 trading days. 4,000 paths by default in Parts 2 and 3 (`--paths`, `--seed` to change).
 - **Heston world:** v0 = θ = 0.04, κ = 2, ξ = 0.3, ρ = −0.7.
 - **Black-Scholes world:** σ = 20%, driven by the same stock shocks as the Heston world, so comparisons are paired.
 - **Bates world** (Heston + lognormal jumps, Part 3): v0 = θ = 0.032, κ = 2, ξ = 0.3, ρ = −0.7, jump intensity λ = 0.4 per year, log jump size N(−10%, 10%²). The expected annual quadratic variation of log-returns is 0.032 + λ·E[J²] = 0.04, as in the Heston world (the ATM implied vol is not exactly 20%).
@@ -22,7 +22,7 @@ Companion to the [README](README.md): setup, methodology and derivations, every 
 - **Integration range:** the COS range is set from the mean and variance of the log-return. These are taken from the characteristic function by central differences. The usual closed-form Heston cumulants lose precision at short maturities (they understate the variance several times over for a 1-day option at low variance), which made the range too narrow.
 - **Poisson cutoff:** the Bates sum is cut at 1e-10 of probability mass. A 1e-6 cut leaves price errors of order 1e-5, because the dropped many-jump terms are priced very differently from the rest.
 - **Tests** (`test_sv.py`):
-  - prices and deltas match independent numerical integration to 1e-5 for T from 1 day to 1.5 years and v from 0 to 0.15
+  - prices and deltas match direct numerical integration of the same characteristic function to 1e-5 for T from 1 day to 1.5 years and v from 0 to 0.15
   - no-arbitrage bounds hold on a wide grid
   - gamma, vega and the shocked prices match finite differences or direct repricing
   - the cumulants match the integrated variance as ξ → 0
@@ -115,7 +115,7 @@ Daily Black-Scholes delta hedging is 3.5x worse in the Heston world than in the 
 | Heston delta | 1.829 [1.818, 1.841] | 1.890 | 51% |
 | Min-var delta | 1.306 [1.299, 1.315] | 1.369 | 100% |
 
-**How much is volatility risk?** The floor that no stock-only hedge can beat (RMSE 1.31) accounts for 87% of the continuous-time variance of BS delta at today's implied vol, 77% at a fixed 20% vol and only 51% for the Heston delta; the rest comes from the choice of delta. By the rough check in the script, daily rebalancing adds about the same error (≈0.41–0.48) in both worlds, so the extra error in the Heston world is mostly continuous-time volatility risk, not discretisation.
+**How much is volatility risk?** The floor that no stock-only hedge can beat (RMSE 1.31) accounts for 87% of the continuous-time variance of BS delta at today's implied vol, 77% at a fixed 20% vol and only 51% for the Heston delta; the rest comes from the choice of delta. By the rough check in the script, daily rebalancing adds an error of the same order in both worlds (≈0.41–0.48 on this seed, against 0.45 in the Black-Scholes world; the check is a difference of two close numbers and is noisy across seeds), so the extra error in the Heston world is mostly continuous-time volatility risk, not discretisation.
 
 **What the second option does.** Delta-vega hedging brings the Heston-world RMSE down to 0.23, against 0.26 for the same hedge in a constant-vol world. A gamma-neutral hedge, which cancels gamma but leaves vega exposure, only gets to 0.89. With a Heston market and a second option priced by Heston the market is complete, so this part confirms the mechanics rather than testing a hypothesis; Part 3 tests the option hedge in a market it does not describe.
 
@@ -156,7 +156,7 @@ Daily Black-Scholes delta hedging is 3.5x worse in the Heston world than in the 
 
 Calibrated Heston: v0 = 0.0394, θ = 0.0399, κ = 3.786, ξ = 0.456, ρ = −0.707, against the true diffusion part v0 = θ = 0.032, κ = 2, ξ = 0.3, ρ = −0.7 plus jumps. The calibration absorbs the jumps into a higher variance level and a higher vol-of-vol. Feller condition holds (0.302 > 0.208).
 
-**Fitting today's surface is not the same as being dynamically consistent.** Each day the calibrated hedger backs out its variance from the hedge option's market price. On 5.94% of path-days (48.9% of paths at least once) no variance in [0, 1] reprices that option. All failures occur at the lower boundary: the model is too expensive even at v = 0, by 0.085 on average. They cluster on days with very low true variance (0.0039 on average, against 0.032 overall), where vega is small. Over all days its implied variance tracks the true variance closely (correlation 0.994) but is biased upwards (mean 0.041 vs 0.032). Despite these failures, the calibrated hedger's Greek hedges perform comparably to the oracle's Greek hedges (below). How much the failures themselves cost is not isolated here.
+**Fitting today's surface is not the same as being dynamically consistent.** Each day the calibrated hedger backs out its variance from the hedge option's market price. On 5.94% of path-days (48.9% of paths at least once) no variance in [0, 1] reprices that option. All failures occur at the lower boundary: the model is too expensive even at v = 0, by 0.085 on average. They cluster on days with very low true variance (0.0039 on average, against 0.032 overall). A likely reason, not tested here, is that the calibrated model reverts faster to a higher long-run variance (κ = 3.8, θ = 0.040 against κ = 2, θ = 0.032), so even at v = 0 its price stays above the market price when true variance is very low. Over all days its implied variance tracks the true variance closely (correlation 0.994) but is biased upwards (mean 0.041 vs 0.032). Despite these failures, the calibrated hedger's Greek hedges perform comparably to the oracle's Greek hedges (below). How much the failures themselves cost is not isolated here.
 
 Other checks: the oracle's variance is recovered from prices to within 7.5e-9 where the hedge option's variance vega exceeds 0.1, and is not identified on 0.83% of sampled path-days. No option held: oracle 0.29%, calibrated 1.42% of path-days (0.03% on inversion-failure days).
 
